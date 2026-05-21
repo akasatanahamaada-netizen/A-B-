@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>後見人サポート</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#f7f6f3;--surface:#ffffff;--border:#e5e3dc;
+  --text:#1a1a18;--muted:#6b6a65;--hint:#a09f9a;
+  --green:#0F6E56;--green-bg:#E1F5EE;--green-light:#5DCAA5;
+  --red:#993C1D;--red-bg:#FAECE7;--red-light:#F0997B;
+  --blue:#185FA5;--blue-bg:#E6F1FB;
+  --purple:#534AB7;--purple-bg:#EEEDFE;
+  --radius:10px;--radius-lg:14px;
+}
+body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+header{background:var(--surface);border-bottom:1px solid var(--border);padding:14px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10;}
+.logo{font-size:17px;font-weight:700;}.logo span{color:var(--green);}
+.sync{font-size:12px;display:flex;align-items:center;gap:5px;color:var(--muted);}
+.sync.ok{color:var(--green);}.sync.err{color:var(--red);}
+.container{max-width:640px;margin:0 auto;padding:20px 16px 80px;}
+
+/* setup screen */
+#setup-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:70vh;text-align:center;padding:20px;}
+.setup-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:28px 24px;width:100%;max-width:400px;}
+.setup-title{font-size:18px;font-weight:700;margin-bottom:8px;}
+.setup-sub{font-size:13px;color:var(--muted);margin-bottom:20px;line-height:1.6;}
+.setup-input{width:100%;font-size:14px;font-family:'Noto Sans JP',sans-serif;padding:10px 12px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text);outline:none;margin-bottom:10px;}
+.setup-input:focus{border-color:var(--green);box-shadow:0 0 0 3px rgba(15,110,86,.1);}
+.setup-hint{font-size:11px;color:var(--hint);margin-bottom:16px;text-align:left;}
+.setup-btn{width:100%;padding:12px;font-size:15px;font-family:'Noto Sans JP',sans-serif;font-weight:700;border:none;border-radius:var(--radius);background:var(--green);color:#fff;cursor:pointer;}
+.setup-btn:hover{background:#0a5a44;}
+.setup-divider{display:flex;align-items:center;gap:10px;margin:16px 0;color:var(--hint);font-size:12px;}
+.setup-divider::before,.setup-divider::after{content:'';flex:1;height:1px;background:var(--border);}
+
+/* main app */
+#main-app{display:none;}
+.tabs{display:flex;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:4px;gap:2px;margin-bottom:20px;}
+.tab{flex:1;padding:9px 4px;font-size:12px;font-family:'Noto Sans JP',sans-serif;border:none;background:none;color:var(--muted);cursor:pointer;border-radius:8px;font-weight:500;transition:all .15s;}
+.tab.active{background:var(--green);color:#fff;}
+.section{display:none;}.section.active{display:block;}
+.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:18px;}
+.mcard{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px;}
+.mcard-label{font-size:11px;color:var(--muted);margin-bottom:5px;}
+.mcard-value{font-size:20px;font-weight:700;}
+.mcard-value.inc{color:var(--green);}.mcard-value.exp{color:var(--red);}
+.form-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px;margin-bottom:16px;}
+.form-title{font-size:13px;font-weight:700;color:var(--muted);margin-bottom:12px;}
+.frow{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;}
+.frow:last-child{margin-bottom:0;}
+select,input[type=text],input[type=number],input[type=date]{
+  flex:1;min-width:90px;font-size:14px;font-family:'Noto Sans JP',sans-serif;
+  padding:10px 12px;border:1px solid var(--border);border-radius:var(--radius);
+  background:var(--bg);color:var(--text);outline:none;
+}
+select:focus,input:focus{border-color:var(--green);box-shadow:0 0 0 3px rgba(15,110,86,.1);}
+.btn{padding:10px 16px;font-size:14px;font-family:'Noto Sans JP',sans-serif;font-weight:500;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);color:var(--text);cursor:pointer;transition:all .15s;white-space:nowrap;}
+.btn:hover{background:var(--bg);}
+.btn.primary{background:var(--green);color:#fff;border-color:var(--green);}
+.btn.primary:hover{background:#0a5a44;}
+.btn.info{background:var(--blue-bg);color:var(--blue);border-color:#B5D4F4;}
+.receipt-label{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--blue);cursor:pointer;padding:9px 14px;border:1px dashed #B5D4F4;border-radius:var(--radius);background:var(--blue-bg);}
+#receipt-preview{display:none;width:44px;height:44px;object-fit:cover;border-radius:6px;border:1px solid var(--border);}
+.entry-list{display:flex;flex-direction:column;gap:8px;}
+.entry{display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;}
+.eicon{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;}
+.eicon.inc{background:var(--green-bg);color:var(--green);}
+.eicon.exp{background:var(--red-bg);color:var(--red);}
+.einfo{flex:1;min-width:0;}
+.ename{font-size:14px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.emeta{font-size:11px;color:var(--muted);margin-top:2px;display:flex;gap:8px;flex-wrap:wrap;}
+.eamt{font-size:15px;font-weight:700;white-space:nowrap;}
+.eamt.inc{color:var(--green);}.eamt.exp{color:var(--red);}
+.del-btn{background:none;border:none;color:var(--hint);cursor:pointer;font-size:16px;padding:4px;flex-shrink:0;transition:color .1s;}
+.del-btn:hover{color:var(--red);}
+.receipt-thumb{width:32px;height:32px;object-fit:cover;border-radius:5px;border:1px solid var(--border);cursor:pointer;flex-shrink:0;}
+.rbadge{font-size:11px;background:var(--blue-bg);color:var(--blue);padding:2px 7px;border-radius:5px;}
+.rec-card{display:flex;align-items:center;justify-content:space-between;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;}
+.rec-name{font-size:14px;font-weight:500;}
+.rec-sub{font-size:11px;color:var(--muted);margin-top:2px;}
+.badge{display:inline-block;font-size:11px;padding:2px 8px;border-radius:5px;font-weight:500;}
+.badge.bank{background:var(--blue-bg);color:var(--blue);}
+.badge.property{background:#EAF3DE;color:#3B6D11;}
+.badge.pension{background:var(--purple-bg);color:var(--purple);}
+.badge.other{background:#F1EFE8;color:#5F5E5A;}
+.empty{text-align:center;color:var(--hint);font-size:13px;padding:32px 16px;}
+.section-hd{font-size:13px;font-weight:700;color:var(--muted);margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid var(--border);}
+.rrow{display:flex;justify-content:space-between;font-size:13px;padding:7px 0;border-bottom:1px solid var(--border);}
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:100;align-items:center;justify-content:center;padding:20px;}
+.modal-overlay.open{display:flex;}
+.modal-box{background:var(--surface);border-radius:var(--radius-lg);padding:16px;width:100%;max-width:360px;}
+.modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;}
+.modal-header span{font-size:15px;font-weight:700;}
+.loading{text-align:center;padding:40px;color:var(--muted);font-size:14px;}
+.room-display{font-size:11px;color:var(--hint);margin-top:4px;}
+.logout-btn{font-size:12px;color:var(--hint);background:none;border:none;cursor:pointer;text-decoration:underline;}
+.logout-btn:hover{color:var(--red);}
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <div class="logo">後見人<span>サポート</span></div>
+    <div class="room-display" id="room-display"></div>
+  </div>
+  <div style="display:flex;align-items:center;gap:12px;">
+    <div class="sync" id="sync-status">● 接続中...</div>
+    <button class="logout-btn" onclick="logout()">退出</button>
+  </div>
+</header>
+
+<!-- セットアップ画面 -->
+<div id="setup-screen" class="container">
+  <div class="setup-card">
+    <div class="setup-title">👵 後見人サポート</div>
+    <div class="setup-sub">家族で同じデータを共有するために、<strong>合言葉</strong>を設定してください。<br>同じ合言葉を使えば、どのデバイスからでも同じデータにアクセスできます。</div>
+    <input class="setup-input" id="room-input" type="text" placeholder="合言葉を入力（例：yamada-family）" autocomplete="off"/>
+    <div class="setup-hint">※ 半角英数字・ハイフン使用可。家族だけが知っている言葉にしてください。</div>
+    <button class="setup-btn" onclick="joinRoom()">この合言葉で始める</button>
+    <div class="setup-divider">または</div>
+    <div style="font-size:12px;color:var(--muted);">お母様と同じ合言葉を入力すると、同じデータが表示されます。</div>
+  </div>
+</div>
+
+<!-- メインアプリ -->
+<div id="main-app">
+  <div class="container">
+    <div class="tabs">
+      <button class="tab active" onclick="sw('cashflow',this)">収支</button>
+      <button class="tab" onclick="sw('assets',this)">財産</button>
+      <button class="tab" onclick="sw('recurring',this)">定期収支</button>
+      <button class="tab" onclick="sw('graph',this)">グラフ</button>
+      <button class="tab" onclick="sw('report',this)">報告書</button>
+    </div>
+
+    <!-- 収支 -->
+    <div id="tab-cashflow" class="section active">
+      <div class="cards">
+        <div class="mcard"><div class="mcard-label">今月の残高</div><div class="mcard-value" id="balance">¥0</div></div>
+        <div class="mcard"><div class="mcard-label">収入</div><div class="mcard-value inc" id="tot-inc">¥0</div></div>
+        <div class="mcard"><div class="mcard-label">支出</div><div class="mcard-value exp" id="tot-exp">¥0</div></div>
+      </div>
+      <div class="form-box">
+        <div class="form-title">＋ 収支を追加</div>
+        <div class="frow">
+          <select id="type"><option value="income">収入</option><option value="expense">支出</option></select>
+          <input type="date" id="date"/>
+        </div>
+        <div class="frow">
+          <input type="text" id="desc" placeholder="内容（例：年金、医療費）" style="flex:2;"/>
+          <input type="number" id="amount" placeholder="金額（円）" min="0"/>
+        </div>
+        <div class="frow" style="align-items:center;">
+          <label class="receipt-label">
+            📷 領収書を添付
+            <input type="file" id="receipt-file" accept="image/*" style="display:none;" onchange="previewReceipt(this)"/>
+          </label>
+          <img id="receipt-preview" alt="領収書プレビュー"/>
+          <button class="btn primary" onclick="addEntry()" style="margin-left:auto;">追加</button>
+        </div>
+      </div>
+      <div class="entry-list" id="entry-list"><div class="loading">読み込み中...</div></div>
+    </div>
+
+    <!-- 財産 -->
+    <div id="tab-assets" class="section">
+      <div class="form-box">
+        <div class="form-title">＋ 財産を追加</div>
+        <div class="frow">
+          <input type="text" id="asset-name" placeholder="名称（例：〇〇銀行普通預金）" style="flex:2;"/>
+          <select id="asset-type"><option value="bank">銀行預金</option><option value="property">不動産</option><option value="pension">年金・保険</option><option value="other">その他</option></select>
+        </div>
+        <div class="frow">
+          <input type="number" id="asset-amount" placeholder="金額（円）" min="0"/>
+          <button class="btn primary" onclick="addAsset()">追加</button>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px;" id="asset-list"><div class="loading">読み込み中...</div></div>
+      <div class="mcard" style="margin-top:16px;"><div class="mcard-label">財産合計</div><div class="mcard-value" id="total-assets">¥0</div></div>
+    </div>
+
+    <!-- 定期収支 -->
+    <div id="tab-recurring" class="section">
+      <div class="form-box">
+        <div class="form-title">＋ 定期収支を登録</div>
+        <div class="frow">
+          <select id="rec-type"><option value="income">収入</option><option value="expense">支出</option></select>
+          <input type="text" id="rec-desc" placeholder="内容（例：年金、家賃）" style="flex:2;"/>
+        </div>
+        <div class="frow">
+          <input type="number" id="rec-amount" placeholder="金額（円）" min="0"/>
+          <select id="rec-freq"><option value="monthly">毎月</option><option value="bimonthly">隔月</option><option value="quarterly">3ヶ月ごと</option><option value="yearly">年1回</option></select>
+          <input type="number" id="rec-day" placeholder="何日" min="1" max="31" style="max-width:70px;"/>
+        </div>
+        <div class="frow">
+          <button class="btn" onclick="addRecurring()">登録</button>
+          <button class="btn info" onclick="applyRecurring()">今月に反映</button>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px;" id="rec-list"><div class="loading">読み込み中...</div></div>
+    </div>
+
+    <!-- グラフ -->
+    <div id="tab-graph" class="section">
+      <div class="cards" style="grid-template-columns:repeat(2,1fr);">
+        <div class="mcard"><div class="mcard-label">過去6ヶ月 収入計</div><div class="mcard-value inc" id="g-inc">¥0</div></div>
+        <div class="mcard"><div class="mcard-label">過去6ヶ月 支出計</div><div class="mcard-value exp" id="g-exp">¥0</div></div>
+      </div>
+      <div style="display:flex;gap:16px;margin-bottom:10px;font-size:12px;color:var(--muted);">
+        <span style="display:flex;align-items:center;gap:5px;"><span style="width:12px;height:12px;border-radius:2px;background:var(--green-light);display:inline-block;"></span>収入</span>
+        <span style="display:flex;align-items:center;gap:5px;"><span style="width:12px;height:12px;border-radius:2px;background:var(--red-light);display:inline-block;"></span>支出</span>
+      </div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px;">
+        <div style="position:relative;width:100%;height:260px;">
+          <canvas id="chart-main" role="img" aria-label="月別収支グラフ">月別収支の推移グラフ</canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- 報告書 -->
+    <div id="tab-report" class="section">
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px;margin-bottom:12px;">
+        <div class="section-hd">財産目録</div>
+        <div id="rep-assets"></div>
+      </div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px;margin-bottom:12px;">
+        <div class="section-hd">収支一覧（直近20件）</div>
+        <div id="rep-cashflow"></div>
+      </div>
+      <button class="btn" onclick="exportTxt()" style="width:100%;padding:12px;font-size:14px;">テキストで書き出す</button>
+      <div id="export-out" style="display:none;margin-top:12px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px;font-size:12px;white-space:pre-wrap;font-family:monospace;color:var(--text);"></div>
+    </div>
+  </div>
+</div>
+
+<!-- 領収書モーダル -->
+<div class="modal-overlay" id="receipt-modal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <span>領収書</span>
+      <button class="del-btn" onclick="closeModal()">✕</button>
+    </div>
+    <img id="modal-img" style="width:100%;border-radius:var(--radius);border:1px solid var(--border);" alt="領収書"/>
+  </div>
+</div>
+
+<!-- Firebase SDK -->
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getDatabase, ref, push, onValue, remove, set } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
+
+// ===== Firebase設定 =====
+// 以下を自分のFirebaseプロジェクトの設定に置き換えてください
+const firebaseConfig = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+  databaseURL: "https://YOUR_PROJECT_ID-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "YOUR_PROJECT_ID",
+  storageBucket: "YOUR_PROJECT_ID.appspot.com",
+  messagingSenderId: "YOUR_SENDER_ID",
+  appId: "YOUR_APP_ID"
+};
+// =======================
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+const todayStr = new Date().toISOString().split('T')[0];
+document.getElementById('date').value = todayStr;
+
+let roomId = null;
+let entries = [], assets = [], recurrings = [];
+let receiptDataUrl = null, chartInst = null;
+
+function fmt(n){ return '¥' + Math.round(n).toLocaleString('ja-JP'); }
+function thisMonth(d){ const now=new Date(),dt=new Date(d); return dt.getFullYear()===now.getFullYear()&&dt.getMonth()===now.getMonth(); }
+
+function setSyncStatus(state){
+  const el = document.getElementById('sync-status');
+  if(state==='ok'){ el.textContent='● 保存済み'; el.className='sync ok'; }
+  else if(state==='loading'){ el.textContent='● 同期中...'; el.className='sync'; }
+  else { el.textContent='● エラー'; el.className='sync err'; }
+}
+
+window.joinRoom = function(){
+  const val = document.getElementById('room-input').value.trim().replace(/\s+/g,'_');
+  if(!val){ alert('合言葉を入力してください。'); return; }
+  roomId = val;
+  localStorage.setItem('guardian_room', roomId);
+  startApp();
+}
+
+window.logout = function(){
+  localStorage.removeItem('guardian_room');
+  location.reload();
+}
+
+function startApp(){
+  document.getElementById('setup-screen').style.display = 'none';
+  document.getElementById('main-app').style.display = 'block';
+  document.getElementById('room-display').textContent = '合言葉：' + roomId;
+  setSyncStatus('loading');
+  subscribeData();
+}
+
+function subscribeData(){
+  const base = 'rooms/' + roomId;
+
+  onValue(ref(db, base+'/entries'), snap => {
+    entries = [];
+    snap.forEach(child => entries.push({_key: child.key, ...child.val()}));
+    entries.sort((a,b)=>a.date.localeCompare(b.date));
+    render();
+    setSyncStatus('ok');
+  }, () => setSyncStatus('err'));
+
+  onValue(ref(db, base+'/assets'), snap => {
+    assets = [];
+    snap.forEach(child => assets.push({_key: child.key, ...child.val()}));
+    render();
+  });
+
+  onValue(ref(db, base+'/recurrings'), snap => {
+    recurrings = [];
+    snap.forEach(child => recurrings.push({_key: child.key, ...child.val()}));
+    render();
+  });
+}
+
+window.previewReceipt = function(input){
+  if(!input.files||!input.files[0]) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    receiptDataUrl = e.target.result;
+    const img = document.getElementById('receipt-preview');
+    img.src = receiptDataUrl; img.style.display = 'block';
+  };
+  reader.readAsDataURL(input.files[0]);
+}
+
+window.addEntry = function(){
+  const desc = document.getElementById('desc').value.trim();
+  const amount = parseFloat(document.getElementById('amount').value);
+  const type = document.getElementById('type').value;
+  const date = document.getElementById('date').value;
+  if(!desc||!amount||!date){ alert('内容・金額・日付を入力してください。'); return; }
+  setSyncStatus('loading');
+  push(ref(db,'rooms/'+roomId+'/entries'), {desc,amount,type,date,receipt:receiptDataUrl||''})
+    .then(()=>{
+      document.getElementById('desc').value='';
+      document.getElementById('amount').value='';
+      document.getElementById('date').value=todayStr;
+      receiptDataUrl=null;
+      document.getElementById('receipt-preview').style.display='none';
+      document.getElementById('receipt-file').value='';
+    }).catch(()=>{ alert('保存に失敗しました。Firebase設定を確認してください。'); setSyncStatus('err'); });
+}
+
+window.delEntry = function(key){
+  if(confirm('削除しますか？')) remove(ref(db,'rooms/'+roomId+'/entries/'+key));
+}
+
+window.addAsset = function(){
+  const name = document.getElementById('asset-name').value.trim();
+  const amount = parseFloat(document.getElementById('asset-amount').value);
+  const type = document.getElementById('asset-type').value;
+  if(!name||!amount){ alert('名称と金額を入力してください。'); return; }
+  push(ref(db,'rooms/'+roomId+'/assets'), {name,amount,type})
+    .then(()=>{ document.getElementById('asset-name').value=''; document.getElementById('asset-amount').value=''; })
+    .catch(()=>alert('保存に失敗しました。'));
+}
+
+window.delAsset = function(key){
+  if(confirm('削除しますか？')) remove(ref(db,'rooms/'+roomId+'/assets/'+key));
+}
+
+window.addRecurring = function(){
+  const desc = document.getElementById('rec-desc').value.trim();
+  const amount = parseFloat(document.getElementById('rec-amount').value);
+  const type = document.getElementById('rec-type').value;
+  const freq = document.getElementById('rec-freq').value;
+  const day = parseInt(document.getElementById('rec-day').value)||1;
+  if(!desc||!amount){ alert('内容と金額を入力してください。'); return; }
+  push(ref(db,'rooms/'+roomId+'/recurrings'), {desc,amount,type,freq,day})
+    .then(()=>{ document.getElementById('rec-desc').value=''; document.getElementById('rec-amount').value=''; })
+    .catch(()=>alert('保存に失敗しました。'));
+}
+
+window.delRecurring = function(key){
+  if(confirm('削除しますか？')) remove(ref(db,'rooms/'+roomId+'/recurrings/'+key));
+}
+
+window.applyRecurring = function(){
+  const now=new Date(), yr=now.getFullYear(), mo=String(now.getMonth()+1).padStart(2,'0');
+  let added=0;
+  const promises = recurrings.map(r=>{
+    const day=String(Math.min(r.day,28)).padStart(2,'0');
+    const date=`${yr}-${mo}-${day}`;
+    const already=entries.some(e=>e.desc===r.desc&&e.date===date&&e.type===r.type);
+    if(!already){ added++; return push(ref(db,'rooms/'+roomId+'/entries'),{desc:r.desc,amount:r.amount,type:r.type,date,receipt:''}); }
+    return Promise.resolve();
+  });
+  Promise.all(promises).then(()=>{
+    if(added>0) alert(`${added}件を今月に反映しました。`);
+    else alert('すでに今月分は反映済みです。');
+  });
+}
+
+window.sw = function(name, btn){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('tab-'+name).classList.add('active');
+  if(name==='graph') setTimeout(renderChart,50);
+  if(name==='report') renderReport();
+}
+
+function render(){
+  const me=entries.filter(e=>thisMonth(e.date));
+  const inc=me.filter(e=>e.type==='income').reduce((a,b)=>a+b.amount,0);
+  const exp=me.filter(e=>e.type==='expense').reduce((a,b)=>a+b.amount,0);
+  document.getElementById('tot-inc').textContent=fmt(inc);
+  document.getElementById('tot-exp').textContent=fmt(exp);
+  document.getElementById('balance').textContent=fmt(inc-exp);
+
+  const list=document.getElementById('entry-list');
+  if(entries.length===0){ list.innerHTML='<div class="empty">収支記録がありません。</div>'; }
+  else{
+    list.innerHTML=[...entries].reverse().map(e=>{
+      const sign=e.type==='income'?'+':'-';
+      const icon=e.type==='income'?'↓':'↑';
+      const rec=e.receipt?`<img src="${e.receipt}" class="receipt-thumb" onclick="showReceipt('${e._key}')" alt="領収書"/>` :'';
+      return `<div class="entry">
+        <div class="eicon ${e.type}">${icon}</div>
+        <div class="einfo">
+          <div class="ename">${e.desc}</div>
+          <div class="emeta"><span>${e.date}</span>${e.receipt?'<span class="rbadge">📷 領収書あり</span>':''}</div>
+        </div>
+        ${rec}
+        <div class="eamt ${e.type}">${sign}${fmt(e.amount)}</div>
+        <button class="del-btn" onclick="delEntry('${e._key}')" title="削除">✕</button>
+      </div>`;
+    }).join('');
+  }
+
+  const at=assets.reduce((a,b)=>a+b.amount,0);
+  document.getElementById('total-assets').textContent=fmt(at);
+  const tl={bank:'銀行預金',property:'不動産',pension:'年金・保険',other:'その他'};
+  const al=document.getElementById('asset-list');
+  if(assets.length===0){ al.innerHTML='<div class="empty">財産が登録されていません。</div>'; }
+  else{
+    al.innerHTML=assets.map(a=>`
+      <div class="rec-card">
+        <div><div class="rec-name">${a.name}</div><span class="badge ${a.type}">${tl[a.type]}</span></div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div style="font-size:15px;font-weight:700;">${fmt(a.amount)}</div>
+          <button class="del-btn" onclick="delAsset('${a._key}')" title="削除">✕</button>
+        </div>
+      </div>`).join('');
+  }
+
+  const fl={monthly:'毎月',bimonthly:'隔月',quarterly:'3ヶ月ごと',yearly:'年1回'};
+  const rl=document.getElementById('rec-list');
+  if(recurrings.length===0){ rl.innerHTML='<div class="empty">定期収支が登録されていません。</div>'; }
+  else{
+    rl.innerHTML=recurrings.map(r=>`
+      <div class="rec-card">
+        <div>
+          <div class="rec-name">${r.desc}</div>
+          <div class="rec-sub">${fl[r.freq]} · 毎月${r.day}日 · ${r.type==='income'?'収入':'支出'}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div style="font-size:15px;font-weight:700;color:${r.type==='income'?'var(--green)':'var(--red)'};">${r.type==='income'?'+':'-'}${fmt(r.amount)}</div>
+          <button class="del-btn" onclick="delRecurring('${r._key}')" title="削除">✕</button>
+        </div>
+      </div>`).join('');
+  }
+
+  renderGraphSummary();
+}
+
+function getMonthKey(d){ const dt=new Date(d); return `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}`; }
+function last6Months(){
+  const months=[],now=new Date();
+  for(let i=5;i>=0;i--){ const d=new Date(now.getFullYear(),now.getMonth()-i,1); months.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`); }
+  return months;
+}
+
+function renderGraphSummary(){
+  const months=last6Months(); let ti=0,te=0;
+  entries.forEach(e=>{ if(months.includes(getMonthKey(e.date))){ if(e.type==='income')ti+=e.amount; else te+=e.amount; } });
+  document.getElementById('g-inc').textContent=fmt(ti);
+  document.getElementById('g-exp').textContent=fmt(te);
+}
+
+function renderChart(){
+  const months=last6Months();
+  const labels=months.map(m=>{ const[y,mo]=m.split('-'); return `${y}/${mo}`; });
+  const incData=months.map(m=>entries.filter(e=>getMonthKey(e.date)===m&&e.type==='income').reduce((a,b)=>a+b.amount,0));
+  const expData=months.map(m=>entries.filter(e=>getMonthKey(e.date)===m&&e.type==='expense').reduce((a,b)=>a+b.amount,0));
+  const canvas=document.getElementById('chart-main');
+  if(chartInst) chartInst.destroy();
+  chartInst=new Chart(canvas,{
+    type:'bar',
+    data:{labels,datasets:[
+      {label:'収入',data:incData,backgroundColor:'#5DCAA5',borderRadius:4},
+      {label:'支出',data:expData,backgroundColor:'#F0997B',borderRadius:4}
+    ]},
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false}},
+      scales:{
+        x:{ticks:{font:{size:12},color:'#888780',autoSkip:false,maxRotation:0},grid:{display:false}},
+        y:{ticks:{font:{size:11},color:'#888780',callback:v=>'¥'+Math.round(v).toLocaleString('ja-JP')},grid:{color:'rgba(136,135,128,0.15)'}}
+      }
+    }
+  });
+}
+
+window.showReceipt = function(key){
+  const e=entries.find(e=>e._key===key);
+  if(!e||!e.receipt) return;
+  document.getElementById('modal-img').src=e.receipt;
+  document.getElementById('receipt-modal').classList.add('open');
+}
+window.closeModal = function(){ document.getElementById('receipt-modal').classList.remove('open'); }
+
+function renderReport(){
+  const tl={bank:'銀行預金',property:'不動産',pension:'年金・保険',other:'その他'};
+  const ra=document.getElementById('rep-assets');
+  if(assets.length===0){ ra.innerHTML='<div class="empty">財産なし</div>'; }
+  else{
+    ra.innerHTML=assets.map(a=>`<div class="rrow"><span>${a.name}（${tl[a.type]}）</span><span>${fmt(a.amount)}</span></div>`).join('');
+    ra.innerHTML+=`<div class="rrow" style="font-weight:700;"><span>合計</span><span>${fmt(assets.reduce((a,b)=>a+b.amount,0))}</span></div>`;
+  }
+  const rc=document.getElementById('rep-cashflow');
+  if(entries.length===0){ rc.innerHTML='<div class="empty">記録なし</div>'; }
+  else{
+    rc.innerHTML=[...entries].reverse().slice(0,20).map(e=>{
+      const sign=e.type==='income'?'+':'-';
+      return `<div class="rrow"><span>${e.date}　${e.desc}</span><span style="color:${e.type==='income'?'var(--green)':'var(--red)'}">${sign}${fmt(e.amount)}</span></div>`;
+    }).join('');
+  }
+}
+
+window.exportTxt = function(){
+  const tl={bank:'銀行預金',property:'不動産',pension:'年金・保険',other:'その他'};
+  let txt='【財産目録】\n';
+  assets.forEach(a=>{ txt+=`${a.name}（${tl[a.type]}）: ${fmt(a.amount)}\n`; });
+  txt+=`合計: ${fmt(assets.reduce((a,b)=>a+b.amount,0))}\n\n【収支記録】\n`;
+  [...entries].reverse().forEach(e=>{ txt+=`${e.date} [${e.type==='income'?'収入':'支出'}] ${e.desc}: ${fmt(e.amount)}${e.receipt?' ※領収書あり':''}\n`; });
+  const out=document.getElementById('export-out');
+  out.textContent=txt; out.style.display='block';
+  if(navigator.clipboard) navigator.clipboard.writeText(txt).then(()=>alert('クリップボードにコピーしました！'));
+}
+
+// 前回の合言葉を記憶
+const savedRoom = localStorage.getItem('guardian_room');
+if(savedRoom){
+  document.getElementById('room-input').value = savedRoom;
+  roomId = savedRoom;
+  startApp();
+}
+</script>
+</body>
+</html>
